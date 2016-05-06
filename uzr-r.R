@@ -27,13 +27,6 @@ uzr.table$uzr.1458 <- uzr.table$UZR/uzr.table$Inn*1458
 # Generate recency weight
 uzr.table$rec.wgt <- 5*0.8^(2016-uzr.table$Season)
 
-# Weighted average UZR/150
-# So close, yet so far away... I want to compute a weighted mean of 
-# UZR.150 (and .1458 vars), weighted by rec.wgt * Inn,
-# across the subgroups defined by playerid, Name, Pos
-# Then I would get to the correctly weighted, unregressed estimate
-#test
-
 # Next, develop regression parameters
 # Aggregate innings for regression
 inn.table <- aggregate(uzr.table$Inn, 
@@ -45,3 +38,14 @@ inn.table$x <- NULL
 inn.table$reg.rate <- inn.table$inn/3500
 # Force to 1.0 if greater than 1
 inn.table[inn.table$reg.rate > 1, 5] <- 1
+
+# Weighted average UZR/150 in uzr.table
+# So close, yet so far away... I want to compute a weighted mean of 
+# UZR.150 (and .1458 vars), weighted by rec.wgt * Inn,
+# across the subgroups defined by playerid, Name, Pos
+# Then I would get to the correctly weighted, unregressed estimate
+
+# Then merge in inn.table$reg.rate by playerid and Pos
+# Then replace UZR.150 and the .1458 vars with themselves * reg.rate
+
+# The end
