@@ -32,6 +32,7 @@ uzr.table$rec.wgt <- 5*0.8^(2016-uzr.table$Season)
 # UZR.150 (and .1458 vars), weighted by rec.wgt * Inn,
 # across the subgroups defined by playerid, Name, Pos
 # Then I would get to the correctly weighted, unregressed estimate
+#test
 
 # Next, develop regression parameters
 # Aggregate innings for regression
