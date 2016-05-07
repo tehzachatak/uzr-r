@@ -43,11 +43,22 @@ inn.table[inn.table$reg.rate > 1, 5] <- 1
 setDT(uzr.table)
 # Set key
 setkey(uzr.table, playerid, pos)
-fld.est <- uzr.table[, .(uzr150=weighted.mean(uzr150,rec.wgt*inn)),
-                     by = .(playerid, pos, name)]
+fld.est <- uzr.table[, list(
+  uzr150=weighted.mean(uzr150,rec.wgt*inn),
+  arm.1458=weighted.mean(arm.1458, rec.wgt*inn),
+  dpr.1458=weighted.mean(dpr.1458, rec.wgt*inn),
+  rngr.1458=weighted.mean(rngr.1458, rec.wgt*inn),
+  errr.1458=weighted.mean(errr.1458, rec.wgt*inn),
+  uzr.1458=weighted.mean(uzr.1458, rec.wgt*inn)),
+  by = .(playerid, pos, name)]
 # Join
 setDT(inn.table)
 setkey(inn.table, playerid, pos, name)
 fld.est <- fld.est[inn.table]
 # Regress
 fld.est$uzr150.reg <- fld.est$uzr150*fld.est$reg.rate
+fld.est$arm.1458.reg <- fld.est$arm.1458*fld.est$reg.rate
+fld.est$dpr.1458.reg <- fld.est$dpr.1458*fld.est$reg.rate
+fld.est$rngr.1458.reg <- fld.est$rngr.1458*fld.est$reg.rate
+fld.est$errr.1458.reg <- fld.est$errr.1458*fld.est$reg.rate
+fld.est$uzr.1458.reg <- fld.est$uzr.1458*fld.est$reg.rate
