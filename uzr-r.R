@@ -2,36 +2,35 @@
 library(data.table)
 
 # Import data
-uzr.table <- read.csv("~/projects/uzr-r/data/fielding_2002_2016-05-03.csv")
+uzr.table <- read.csv("~/Personal Projects/uzr-r/data/fielding_2002_2016-05-03.csv")
 # Subset data
 uzr.table <- uzr.table[, c(27, 1:5, 20:25)]
 # Put data into correct forms
-uzr.table$Pos <- factor(Pos, levels = c("P", "C", "1B", "2B", "3B", "SS", 
+uzr.table$pos <- factor(uzr.table$pos, levels = c("P", "C", "1B", "2B", "3B", "SS", 
                                         "LF", "CF", "RF"))
-uzr.table$Name <- as.character(uzr.table$Name)
+uzr.table$name <- as.character(uzr.table$name)
 
 # Fix inning suffixes
-uzr.table$inn.round <- round(Inn, 0)
-uzr.table$diff <- uzr.table$Inn - uzr.table$inn.round
-# Note that this is a highly inelegant solution that produces ugly ass data.
-# It works, but I would like to make it clean in the future.
+uzr.table$inn.round <- round(uzr.table$inn, 0)
+uzr.table$diff <- uzr.table$inn - uzr.table$inn.round
+# Note that this is a highly inelegant solution
 uzr.table$suff <- uzr.table$diff * 1/3 * 10
-uzr.table$Inn <- uzr.table$inn.round + uzr.table$suff
+uzr.table$inn <- uzr.table$inn.round + uzr.table$suff
 uzr.table <- uzr.table[, c(1:12)]
 # Express runs stats as rates
-uzr.table$arm.1458 <- uzr.table$ARM/uzr.table$Inn*1458
-uzr.table$dpr.1458 <- uzr.table$DPR/uzr.table$Inn*1458
-uzr.table$rngr.1458 <- uzr.table$RngR/uzr.table$Inn*1458
-uzr.table$errr.1458 <- uzr.table$ErrR/uzr.table$Inn*1458
-uzr.table$uzr.1458 <- uzr.table$UZR/uzr.table$Inn*1458
+uzr.table$arm.1458 <- uzr.table$arm/uzr.table$inn*1458
+uzr.table$dpr.1458 <- uzr.table$dpr/uzr.table$inn*1458
+uzr.table$rngr.1458 <- uzr.table$rngr/uzr.table$inn*1458
+uzr.table$errr.1458 <- uzr.table$errr/uzr.table$inn*1458
+uzr.table$uzr.1458 <- uzr.table$uzr/uzr.table$inn*1458
 # Generate recency weight
-uzr.table$rec.wgt <- 5*0.8^(2016-uzr.table$Season)
+uzr.table$rec.wgt <- 5*0.8^(2016-uzr.table$season)
 
 # Next, develop regression parameters
 # Aggregate innings for regression
-inn.table <- aggregate(uzr.table$Inn, 
-                       by=list(playerid=uzr.table$playerid, Name=uzr.table$Name, 
-                               Pos=uzr.table$Pos), sum, na.rm=TRUE)
+inn.table <- aggregate(uzr.table$inn, 
+                       by=list(playerid=uzr.table$playerid, name=uzr.table$name, 
+                               pos=uzr.table$pos), sum, na.rm=TRUE)
 inn.table$inn <- inn.table$x
 inn.table$x <- NULL
 # Generate regression rate
@@ -39,13 +38,16 @@ inn.table$reg.rate <- inn.table$inn/3500
 # Force to 1.0 if greater than 1
 inn.table[inn.table$reg.rate > 1, 5] <- 1
 
-# Weighted average UZR/150 in uzr.table
-# So close, yet so far away... I want to compute a weighted mean of 
-# UZR.150 (and .1458 vars), weighted by rec.wgt * Inn,
-# across the subgroups defined by playerid, Name, Pos
-# Then I would get to the correctly weighted, unregressed estimate
-
-# Then merge in inn.table$reg.rate by playerid and Pos
-# Then replace UZR.150 and the .1458 vars with themselves * reg.rate
-
-# The end
+# Weighted average UZR/150
+# Make uzr.table a data.table
+setDT(uzr.table)
+# Set key
+setkey(uzr.table, playerid, pos)
+fld.est <- uzr.table[, .(uzr150=weighted.mean(uzr150,rec.wgt*inn)),
+                     by = .(playerid, pos, name)]
+# Join
+setDT(inn.table)
+setkey(inn.table, playerid, pos, name)
+fld.est <- fld.est[inn.table]
+# Regress
+fld.est$uzr150.reg <- fld.est$uzr150*fld.est$reg.rate
