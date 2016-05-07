@@ -1,6 +1,5 @@
 # Libraries
 library(data.table)
-
 # Import data
 uzr.table <- read.csv("~/Personal Projects/uzr-r/data/fielding_2002_2016-05-03.csv")
 # Subset data
@@ -9,7 +8,6 @@ uzr.table <- uzr.table[, c(27, 1:5, 20:25)]
 uzr.table$pos <- factor(uzr.table$pos, levels = c("P", "C", "1B", "2B", "3B", "SS", 
                                         "LF", "CF", "RF"))
 uzr.table$name <- as.character(uzr.table$name)
-
 # Fix inning suffixes
 uzr.table$inn.round <- round(uzr.table$inn, 0)
 uzr.table$diff <- uzr.table$inn - uzr.table$inn.round
@@ -25,9 +23,8 @@ uzr.table$errr.1458 <- uzr.table$errr/uzr.table$inn*1458
 uzr.table$uzr.1458 <- uzr.table$uzr/uzr.table$inn*1458
 # Generate recency weight
 uzr.table$rec.wgt <- 5*0.8^(2016-uzr.table$season)
-
 # Next, develop regression parameters
-# Aggregate innings for regression
+setDT(uzr.table)
 inn.table <- aggregate(uzr.table$inn, 
                        by=list(playerid=uzr.table$playerid, name=uzr.table$name, 
                                pos=uzr.table$pos), sum, na.rm=TRUE)
@@ -43,7 +40,7 @@ inn.table[inn.table$reg.rate > 1, 5] <- 1
 setDT(uzr.table)
 # Set key
 setkey(uzr.table, playerid, pos)
-fld.est <- uzr.table[, list(
+fld.est <- uzr.table[, .(
   uzr150=weighted.mean(uzr150,rec.wgt*inn),
   arm.1458=weighted.mean(arm.1458, rec.wgt*inn),
   dpr.1458=weighted.mean(dpr.1458, rec.wgt*inn),
@@ -55,10 +52,20 @@ fld.est <- uzr.table[, list(
 setDT(inn.table)
 setkey(inn.table, playerid, pos, name)
 fld.est <- fld.est[inn.table]
-# Regress
-fld.est$uzr150.reg <- fld.est$uzr150*fld.est$reg.rate
-fld.est$arm.1458.reg <- fld.est$arm.1458*fld.est$reg.rate
-fld.est$dpr.1458.reg <- fld.est$dpr.1458*fld.est$reg.rate
-fld.est$rngr.1458.reg <- fld.est$rngr.1458*fld.est$reg.rate
-fld.est$errr.1458.reg <- fld.est$errr.1458*fld.est$reg.rate
-fld.est$uzr.1458.reg <- fld.est$uzr.1458*fld.est$reg.rate
+
+# Regress (I should be able to do this so much more concisely, but how?)
+fld.est.reg <- 
+  fld.est[, 
+          .(uzr150 = uzr150*reg.rate, arm.1458 = arm.1458*reg.rate, 
+            dpr.1458 = dpr.1458*reg.rate, rngr.1458 = rngr.1458*reg.rate, 
+            errr.1458 = errr.1458*reg.rate, uzr.1458 = uzr.1458*reg.rate), 
+          by = .(playerid, pos, name)]
+# Drop positions we don't have info for
+fld <- fld.est.reg[pos != "P" & pos != "C"]
+# Drop records with no UZR estimate
+fld <- fld[uzr150 != "NA"]
+
+# 
+
+# Drop unnecessary tables
+rm(fld.est, inn.table, uzr.table)
